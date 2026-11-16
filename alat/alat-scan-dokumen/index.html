@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ScanDokumen — Scan Dokumen Online 100% di Browser</title>
+<meta name="description" content="Scan ijazah, KK, KTP jadi rapi seperti hasil scanner. 100% diproses di browser, tidak dikirim ke server.">
+
+<!-- Tailwind CSS via CDN -->
+<script src="./vendor/tailwind.js"></script>
+
+<!-- OpenCV.js : definisikan Module SEBELUM library dimuat -->
+<script>
+  var Module = {
+    onRuntimeInitialized: function () {
+      window.dispatchEvent(new Event('cv-ready'));
+    }
+  };
+</script>
+<script async src="./vendor/opencv.js"></script>
+
+<!-- JScanify : engine alternatif deteksi kertas (fallback bila OpenCV gagal) -->
+<script src="./vendor/jscanify.min.js"></script>
+
+<!-- jsPDF : ekspor PDF A4 / F4 / Auto -->
+<script src="./vendor/jspdf.umd.min.js"></script>
+
+<style>
+  html { scroll-behavior: smooth; }
+  body { font-family: ui-sans-system, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  .drag-over { border-color: #16a34a !important; background: #f0fdf4 !important; transform: scale(1.01); }
+  input[type="range"] { -webkit-appearance: none; appearance: none; height: 8px; border-radius: 9999px; background: #e2e8f0; outline: none; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #16a34a; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.25); cursor: pointer; }
+  input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: #16a34a; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.25); cursor: pointer; }
+  .mode-btn.active { background: #16a34a; color: #fff; border-color: #16a34a; }
+  .spinner { width: 52px; height: 52px; border-radius: 50%; border: 5px solid #dcfce7; border-top-color: #16a34a; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #overlayCanvas { touch-action: none; }
+  .checker { background-image: linear-gradient(45deg,#f1f5f9 25%,transparent 25%),linear-gradient(-45deg,#f1f5f9 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#f1f5f9 75%),linear-gradient(-45deg,transparent 75%,#f1f5f9 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0; }
+</style>
+</head>
+
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+
+<!-- ============ LOADING OVERLAY OPENCV ============ -->
+<div id="loadingOverlay" class="fixed inset-0 z-50 bg-white/95 backdrop-blur flex flex-col items-center justify-center gap-4 px-6 text-center">
+  <div class="spinner"></div>
+  <h2 class="text-xl font-bold text-slate-800">Memuat mesin pemindai…</h2>
+  <p id="cvStatusText" class="text-sm text-slate-500 max-w-sm">Mengunduh OpenCV.js (computer vision) untuk meluruskan perspektif dokumen. Butuh koneksi internet sekali saat pertama dibuka.</p>
+  <p class="text-xs text-slate-400">Jika lama, aplikasi tetap bisa dipakai dengan mode fallback otomatis.</p>
+</div>
+
+<!-- ============ HEADER ============ -->
+<header class="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-slate-200">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-green-600 flex items-center justify-center text-white shadow">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6M9 8h1m4 0h1M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/><path stroke-linecap="round" stroke-linejoin="round" d="M3 7l3-3m15 3l-3-3M3 17l3 3m15-3l-3 3"/></svg>
+      </div>
+      <div>
+        <h1 class="font-extrabold text-lg leading-tight text-slate-900">ScanDokumen<span class="text-green-600">.</span></h1>
+        <p class="text-xs text-slate-500 leading-tight">Scan ijazah • KK • KTP jadi rapi</p>
+      </div>
+    </div>
+    <span class="hidden sm:inline-flex items-center gap-1.5 bg-green-50 text-green-700 border border-green-200 text-xs font-semibold px-3 py-1.5 rounded-full">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      100% Client-Side
+    </span>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+  <!-- Judul + badge privasi -->
+  <section class="text-center space-y-3">
+    <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900">Ubah Foto Dokumen Jadi Hasil Scan Profesional</h2>
+    <p class="text-slate-500 max-w-2xl mx-auto text-sm sm:text-base">Foto ijazah, KK, atau KTP yang miring &amp; berbayang akan diluruskan, dijernihkan, dan siap diunduh sebagai JPG/PDF — cocok untuk melamar kerja.</p>
+    <div class="inline-flex items-center gap-2 bg-green-600 text-white text-xs sm:text-sm font-semibold px-4 py-2 rounded-full shadow">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+      100% Aman: Dokumen diproses di browser perangkat Anda dan tidak pernah dikirim ke server mana pun.
+    </div>
+    <div class="flex flex-wrap justify-center gap-2 text-xs font-medium text-slate-500">
+      <span class="bg-white border border-slate-200 px-3 py-1 rounded-full">1. Upload / Foto</span>
+      <span class="bg-white border border-slate-200 px-3 py-1 rounded-full">2. Atur Sudut &amp; Luruskan</span>
+      <span class="bg-white border border-slate-200 px-3 py-1 rounded-full">3. Jernihkan</span>
+      <span class="bg-white border border-slate-200 px-3 py-1 rounded-full">4. Unduh JPG / PDF</span>
+    </div>
+  </section>
+
+  <!-- ============ 1. INPUT GAMBAR ============ -->
+  <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+    <h3 class="font-bold text-slate-900 mb-3 flex items-center gap-2">
+      <span class="w-7 h-7 rounded-full bg-green-600 text-white text-sm flex items-center justify-center font-bold">1</span> Upload Foto Dokumen
+    </h3>
+
+    <div id="dropZone" class="border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50 px-6 py-10 text-center transition cursor-pointer">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mx-auto text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+      <p class="mt-3 font-semibold text-slate-700">Seret &amp; letakkan foto di sini</p>
+      <p class="text-sm text-slate-400">atau klik area ini untuk memilih file JPG / PNG</p>
+      <p class="text-xs text-slate-400 mt-2">Tips: foto di atas permukaan datar dengan pencahayaan cukup agar hasil terbaik.</p>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mt-4">
+      <button id="btnUpload" type="button" class="flex items-center justify-center gap-2 bg-slate-900 text-white font-semibold py-3 px-4 rounded-xl hover:bg-slate-700 active:scale-[.98] transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+        Pilih File
+      </button>
+      <button id="btnCamera" type="button" class="flex items-center justify-center gap-2 bg-green-600 text-white font-semibold py-3 px-4 rounded-xl hover:bg-green-700 active:scale-[.98] transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Ambil Foto (Kamera)
+      </button>
+    </div>
+
+    <input type="file" id="fileInput" accept="image/jpeg,image/png,image/jpg" class="hidden">
+    <!-- capture="environment" = kamera belakang HP -->
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden">
+
+    <div id="fileInfo" class="hidden mt-4 flex-wrap items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm">
+      <span id="fileName" class="font-semibold text-slate-700 truncate max-w-[220px]"></span>
+      <span id="fileDims" class="text-slate-500"></span>
+      <span id="fileSize" class="text-slate-500"></span>
+      <span id="cvBadge" class="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-amber-100 text-amber-700">OpenCV: memuat…</span>
+    </div>
+  </section>
+
+  <!-- ============ 2. EDITOR + HASIL (SIDE BY SIDE) ============ -->
+  <section id="editorSection" class="hidden space-y-6">
+    <div class="grid lg:grid-cols-2 gap-6 items-start">
+
+      <!-- Kiri: Sebelum + editor sudut -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <h3 class="font-bold text-slate-900 flex items-center gap-2">
+            <span class="w-7 h-7 rounded-full bg-green-600 text-white text-sm flex items-center justify-center font-bold">2</span> Sebelum — Atur 4 Sudut
+          </h3>
+          <span class="text-xs font-semibold bg-slate-100 text-slate-600 px-2 py-1 rounded-full">SEBELUM</span>
+        </div>
+
+        <div id="editorWrapper" class="relative bg-slate-900 rounded-xl overflow-hidden select-none">
+          <canvas id="editorCanvas" class="block w-full h-auto"></canvas>
+          <canvas id="overlayCanvas" class="absolute inset-0 w-full h-full cursor-crosshair"></canvas>
+        </div>
+
+        <p class="text-xs text-slate-500 mt-3 leading-relaxed">Geser <b>4 titik hijau</b> tepat ke sudut-sudut kertas. Gunakan <b>Deteksi Otomatis</b> bila ingin OpenCV mencari sudutnya untuk Anda, lalu tekan tombol proses.</p>
+
+        <div class="grid grid-cols-2 gap-3 mt-4">
+          <button id="btnAutoDetect" type="button" class="flex items-center justify-center gap-2 border-2 border-slate-200 font-semibold py-2.5 px-3 rounded-xl hover:border-green-500 hover:text-green-700 active:scale-[.98] transition text-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            Deteksi Otomatis
+          </button>
+          <button id="btnResetCorners" type="button" class="flex items-center justify-center gap-2 border-2 border-slate-200 font-semibold py-2.5 px-3 rounded-xl hover:border-slate-400 active:scale-[.98] transition text-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Reset Sudut
+          </button>
+        </div>
+
+        <button id="btnProcess" type="button" class="w-full mt-3 flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-3.5 px-4 rounded-xl hover:bg-green-700 active:scale-[.98] transition shadow">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+          Proses &amp; Luruskan Dokumen
+        </button>
+        <p id="processStatus" class="text-xs text-slate-400 text-center mt-2">Perspektif akan diluruskan dengan warpPerspective (OpenCV.js).</p>
+      </div>
+
+      <!-- Kanan: Sesudah -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <h3 class="font-bold text-slate-900 flex items-center gap-2">
+            <span class="w-7 h-7 rounded-full bg-green-600 text-white text-sm flex items-center justify-center font-bold">3</span> Hasil Scan
+          </h3>
+          <span class="text-xs font-semibold bg-green-100 text-green-700 px-2 py-1 rounded-full">SESUDAH</span>
+        </div>
+
+        <div id="resultWrapper" class="relative checker rounded-xl overflow-hidden border border-slate-200 min-h-[280px] flex items-center justify-center">
+          <canvas id="afterCanvas" class="block w-full h-auto"></canvas>
+          <canvas id="compareCanvas" class="absolute inset-0 w-full h-full hidden pointer-events-none"></canvas>
+          <div id="resultPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 px-6 text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6M9 8h1m4 0h1M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>
+            <p class="font-semibold text-slate-500">Belum ada hasil</p>
+            <p class="text-sm">Atur sudut di kiri, lalu tekan “Proses &amp; Luruskan Dokumen”.</p>
+          </div>
+        </div>
+
+        <!-- Slider bandingkan sebelum/sesudah -->
+        <div id="compareControl" class="hidden mt-4">
+          <label class="text-xs font-semibold text-slate-600 flex justify-between"><span>Bandingkan: geser untuk melihat versi sebelum filter</span><span id="compareVal">50%</span></label>
+          <input id="compareSlider" type="range" min="0" max="100" value="50" class="w-full mt-2">
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ FILTER PENJERNIH ============ -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+      <h3 class="font-bold text-slate-900 mb-1 flex items-center gap-2">
+        <span class="w-7 h-7 rounded-full bg-green-600 text-white text-sm flex items-center justify-center font-bold">4</span> Jernihkan Dokumen
+      </h3>
+      <p class="text-xs text-slate-500 mb-4">Filter real-time pada hasil lurusan. <b>Magic Color</b> otomatis memutihkan kertas &amp; menghilangkan bayangan/cahaya tak rata (warna pas foto &amp; stempel tetap alami). Foto ruangan kena cahaya / bayangan tangan &amp; HP? Cukup tekan tombol <b>Mode Bayangan</b> (atau naikkan <b>Brightness</b> +<i>~15</i> &amp; <b>Contrast</b> +<i>~20</i> manual); bila bayangan sangat berat, pakai <b>B&amp;W</b>.</p>
+
+      <div class="grid grid-cols-3 gap-2 sm:gap-3">
+        <button type="button" data-mode="original" class="mode-btn border-2 border-slate-200 rounded-xl py-3 px-2 font-semibold text-sm hover:border-green-500 transition">Original</button>
+        <button type="button" data-mode="magic" class="mode-btn active border-2 border-slate-200 rounded-xl py-3 px-2 font-semibold text-sm hover:border-green-500 transition">Magic Color</button>
+        <button type="button" data-mode="bw" class="mode-btn border-2 border-slate-200 rounded-xl py-3 px-2 font-semibold text-sm hover:border-green-500 transition">Hitam Putih / B&amp;W</button>
+      </div>
+      <button id="btnShadow" type="button" class="mt-3 w-full flex items-center justify-center gap-2 bg-amber-50 text-amber-700 border border-amber-300 font-semibold py-2.5 px-4 rounded-xl hover:bg-amber-100 active:scale-[.98] transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.36 6.36l-1.42-1.42M7.05 7.05L5.63 5.63m12.73 0l-1.42 1.42M7.05 16.95l-1.42 1.42M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        Mode Bayangan — untuk foto gelap / kena bayangan tangan &amp; HP
+      </button>
+
+      <div class="grid sm:grid-cols-3 gap-5 mt-6">
+        <div>
+          <label class="text-sm font-semibold text-slate-700 flex justify-between">Brightness <span id="brightnessVal" class="text-green-700 font-bold">0</span></label>
+          <input id="brightness" type="range" min="-100" max="100" value="0" class="w-full mt-2">
+          <p class="text-xs text-slate-400 mt-1">Kecerahan keseluruhan</p>
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-slate-700 flex justify-between">Contrast <span id="contrastVal" class="text-green-700 font-bold">0</span></label>
+          <input id="contrast" type="range" min="-100" max="100" value="0" class="w-full mt-2">
+          <p class="text-xs text-slate-400 mt-1">Ketajaman beda terang–gelap (teks)</p>
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-slate-700 flex justify-between">Saturation <span id="saturationVal" class="text-green-700 font-bold">0</span></label>
+          <input id="saturation" type="range" min="-100" max="100" value="0" class="w-full mt-2">
+          <p class="text-xs text-slate-400 mt-1">Intensitas warna (bonus)</p>
+        </div>
+      </div>
+
+      <button id="btnResetFilter" type="button" class="mt-4 text-sm font-semibold text-slate-500 hover:text-slate-800 underline underline-offset-2">Reset filter</button>
+    </div>
+
+    <!-- ============ EKSPOR ============ -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+      <h3 class="font-bold text-slate-900 mb-4 flex items-center gap-2">
+        <span class="w-7 h-7 rounded-full bg-green-600 text-white text-sm flex items-center justify-center font-bold">5</span> Unduh Hasil
+      </h3>
+
+      <div class="grid sm:grid-cols-2 gap-5">
+        <div>
+          <label for="pdfSize" class="text-sm font-semibold text-slate-700">Ukuran Kertas PDF</label>
+          <select id="pdfSize" class="w-full mt-2 border-2 border-slate-200 rounded-xl px-3 py-3 font-medium focus:border-green-500 focus:outline-none">
+            <option value="auto" selected>Auto (mengikuti rasio foto)</option>
+            <option value="a4">A4 (210 × 297 mm)</option>
+            <option value="f4">F4 (210 × 330 mm)</option>
+          </select>
+          <p class="text-xs text-slate-400 mt-1">Pilih A4/F4 bila portal lamaran meminta format tertentu.</p>
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-slate-700 flex justify-between">Kualitas Kompresi JPG <span id="qualityVal" class="text-green-700 font-bold">85%</span></label>
+          <input id="quality" type="range" min="10" max="100" value="85" class="w-full mt-2">
+          <p class="text-xs text-slate-400 mt-1">Turunkan untuk file lebih kecil. Target pelamar kerja: <b>di bawah 500 KB</b>.</p>
+          <p id="fileSizeInfo" class="text-sm font-semibold text-slate-700 mt-2">Estimasi ukuran: —</p>
+        </div>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-3 mt-6">
+        <button id="btnDownloadJpg" type="button" disabled class="flex items-center justify-center gap-2 bg-slate-900 text-white font-bold py-3.5 px-4 rounded-xl hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[.98] transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0L8 8m4-4v12"/></svg>
+          Download JPG
+        </button>
+        <button id="btnDownloadPdf" type="button" disabled class="flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-3.5 px-4 rounded-xl hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[.98] transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a2 2 0 00-.586-1.414l-5.414-5.414A2 2 0 0011.586 2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6"/></svg>
+          Download PDF
+        </button>
+      </div>
+      <p class="text-xs text-slate-400 mt-3 text-center">Nama file otomatis: <span class="font-mono">scan-dokumen.jpg / .pdf</span> — ganti namanya sesuai dokumen (mis. <span class="font-mono">ijazah-nama.jpg</span>) sebelum diunggah ke portal lamaran.</p>
+    </div>
+  </section>
+
+  <footer class="text-center text-xs text-slate-400 pb-8 leading-relaxed">
+    <p class="font-semibold text-slate-500">ScanDokumen — 100% client-side.</p>
+    <p>Semua pemrosesan (deteksi tepi, koreksi perspektif, penjernihan, kompresi) berjalan di browser Anda dengan OpenCV.js + Canvas + jsPDF.<br>Foto Anda tidak pernah meninggalkan perangkat ini.</p>
+  </footer>
+</main>
+
+<!-- Toast -->
+<div id="toast" class="fixed left-1/2 -translate-x-1/2 bottom-6 z-50 hidden bg-slate-900 text-white text-sm font-medium px-5 py-3 rounded-full shadow-xl max-w-[90vw] text-center"></div>
+
+<script>
+/* =====================================================================
+   ScanDokumen — 100% Client-Side Document Scanner
+   Stack: OpenCV.js (warpPerspective + deteksi tepi), JScanify (fallback),
+          HTML5 Canvas (filter real-time), jsPDF (ekspor PDF)
+   ===================================================================== */
+(function () {
+  'use strict';
+
+  // ---------- Elemen ----------
+  const $ = (id) => document.getElementById(id);
+  const loadingOverlay = $('loadingOverlay');
+  const cvStatusText = $('cvStatusText');
+  const dropZone = $('dropZone');
+  const fileInput = $('fileInput');
+  const cameraInput = $('cameraInput');
+  const fileInfo = $('fileInfo');
+  const editorSection = $('editorSection');
+  const editorCanvas = $('editorCanvas');
+  const overlayCanvas = $('overlayCanvas');
+  const afterCanvas = $('afterCanvas');
+  const compareCanvas = $('compareCanvas');
+  const resultPlaceholder = $('resultPlaceholder');
+  const compareControl = $('compareControl');
+  const compareSlider = $('compareSlider');
+  const compareVal = $('compareVal');
+
+  const ectx = editorCanvas.getContext('2d');
+  const octx = overlayCanvas.getContext('2d');
+  const actx = afterCanvas.getContext('2d');
+  const cctx = compareCanvas.getContext('2d');
+
+  // ---------- State ----------
+  let originalImage = null;    // HTMLImageElement asli
+  let originalCanvas = null;   // canvas resolusi penuh foto asli
+  let warpedCanvas = null;     // hasil warpPerspective (belum difilter)
+  let cvReady = false;
+  let filterMode = 'magic';    // original | magic | bw
+  let brightness = 0, contrast = 0, saturation = 0;
+  let draggingIndex = -1;
+  let rafPending = false;
+
+  // 4 sudut dalam koordinat normalisasi (0..1): TL, TR, BR, BL
+  let corners = [
+    { x: 0.08, y: 0.08 },
+    { x: 0.92, y: 0.08 },
+    { x: 0.92, y: 0.92 },
+    { x: 0.08, y: 0.92 }
+  ];
+  const DEFAULT_CORNERS = JSON.parse(JSON.stringify(corners));
+
+  // ---------- Util ----------
+  function toast(msg, ms = 3200) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.remove('hidden');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.add('hidden'), ms);
+  }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+  function formatKB(bytes) {
+    if (!bytes && bytes !== 0) return '—';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+  function setCvBadge(ok, text) {
+    const b = $('cvBadge');
+    b.textContent = text;
+    b.className = 'ml-auto text-xs font-semibold px-2 py-1 rounded-full ' +
+      (ok ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700');
+  }
+
+  // ---------- Status OpenCV ----------
+  // Tandai OpenCV siap dengan beberapa strategi (karena hook onRuntimeInitialized
+  // di build 4.8.0 ini terkadang tidak memicu event 'cv-ready').
+  function markCvReady() {
+    if (cvReady) return;
+    cvReady = true;
+    setCvBadge(true, 'OpenCV: siap');
+    loadingOverlay.style.display = 'none';
+    toast('Mesin OpenCV.js siap. Silakan unggah foto dokumen.');
+  }
+  // Strategi 1: event 'cv-ready' dari Module.onRuntimeInitialized (jika terpicu)
+  window.addEventListener('cv-ready', markCvReady);
+  // Strategi 2: polling — cv.getPerspectiveTransform baru ada SETELAH runtime WASM siap
+  let cvGaveUp = false;
+  (function waitForCv() {
+    if (cvReady) return;
+    if (typeof cv !== 'undefined' && typeof cv.getPerspectiveTransform === 'function') {
+      markCvReady();
+      return;
+    }
+    if (cvGaveUp) return; // hentikan polling setelah timeout
+    setTimeout(waitForCv, 200);
+  })();
+  // Timeout: jangan kunci pengguna selamanya bila CDN lambat/gagal
+  setTimeout(() => {
+    if (!cvReady) {
+      cvGaveUp = true;
+      loadingOverlay.style.display = 'none';
+      setCvBadge(false, 'OpenCV: mode fallback');
+      toast('OpenCV lambat dimuat — pakai mode fallback (JScanify + JS). Koreksi perspektif tetap berjalan.', 5000);
+    }
+  }, 15000);
+
+  // ---------- 1. Input Gambar ----------
+  dropZone.addEventListener('click', () => fileInput.click());
+  $('btnUpload').addEventListener('click', () => fileInput.click());
+  $('btnCamera').addEventListener('click', () => cameraInput.click());
+  fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); e.target.value = ''; });
+  cameraInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); e.target.value = ''; });
+
+  ['dragenter', 'dragover'].forEach(ev => dropZone.addEventListener(ev, (e) => {
+    e.preventDefault(); dropZone.classList.add('drag-over');
+  }));
+  ['dragleave', 'drop'].forEach(ev => dropZone.addEventListener(ev, (e) => {
+    e.preventDefault(); dropZone.classList.remove('drag-over');
+  }));
+  dropZone.addEventListener('drop', (e) => {
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
+  // Bonus: tempel (paste) dari clipboard
+  window.addEventListener('paste', (e) => {
+    const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'));
+    if (item) handleFile(item.getAsFile());
+  });
+
+  function handleFile(file) {
+    if (!file.type.startsWith('image/')) { toast('File harus berupa gambar JPG/PNG.'); return; }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      originalImage = img;
+      originalCanvas = document.createElement('canvas');
+      originalCanvas.width = img.naturalWidth;
+      originalCanvas.height = img.naturalHeight;
+      originalCanvas.getContext('2d').drawImage(img, 0, 0);
+      warpedCanvas = null;
+
+      $('fileName').textContent = file.name;
+      $('fileDims').textContent = img.naturalWidth + ' × ' + img.naturalHeight + ' px';
+      $('fileSize').textContent = formatKB(file.size);
+      fileInfo.classList.remove('hidden');
+      fileInfo.classList.add('flex');
+
+      corners = JSON.parse(JSON.stringify(DEFAULT_CORNERS));
+      editorSection.classList.remove('hidden');
+      resultPlaceholder.style.display = 'flex';
+      afterCanvas.width = 10; afterCanvas.height = 10;
+      compareControl.classList.add('hidden');
+      $('btnDownloadJpg').disabled = true;
+      $('btnDownloadPdf').disabled = true;
+      $('fileSizeInfo').textContent = 'Estimasi ukuran: —';
+
+      fitEditorCanvas();
+      editorSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      toast('Foto dimuat. Geser 4 titik hijau ke sudut kertas, lalu proses.');
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => toast('Gagal membaca gambar. Coba file JPG/PNG lain.');
+    img.src = url;
+  }
+
+  // ---------- Editor: gambar + overlay sudut ----------
+  function fitEditorCanvas() {
+    if (!originalCanvas) return;
+    const wrapW = $('editorWrapper').clientWidth || 600;
+    const scale = wrapW / originalCanvas.width;
+    editorCanvas.width = Math.round(originalCanvas.width * scale);
+    editorCanvas.height = Math.round(originalCanvas.height * scale);
+    overlayCanvas.width = editorCanvas.width;
+    overlayCanvas.height = editorCanvas.height;
+    ectx.drawImage(originalCanvas, 0, 0, editorCanvas.width, editorCanvas.height);
+    drawOverlay();
+  }
+  window.addEventListener('resize', () => { if (originalCanvas) fitEditorCanvas(); });
+
+  function cornerPx(c) { return { x: c.x * overlayCanvas.width, y: c.y * overlayCanvas.height }; }
+
+  function drawOverlay() {
+    if (!originalCanvas) return;
+    const W = overlayCanvas.width, H = overlayCanvas.height;
+    octx.clearRect(0, 0, W, H);
+    const pts = corners.map(cornerPx);
+
+    // Gelapkan area di luar poligon dokumen
+    octx.beginPath();
+    octx.rect(0, 0, W, H);
+    octx.moveTo(pts[0].x, pts[0].y);
+    pts.forEach(p => octx.lineTo(p.x, p.y));
+    octx.closePath();
+    octx.fillStyle = 'rgba(0,0,0,0.45)';
+    octx.fill('evenodd');
+
+    // Garis poligon
+    octx.beginPath();
+    octx.moveTo(pts[0].x, pts[0].y);
+    pts.forEach(p => octx.lineTo(p.x, p.y));
+    octx.closePath();
+    octx.strokeStyle = '#22c55e';
+    octx.lineWidth = 3;
+    octx.stroke();
+
+    // Handle sudut (lingkaran + nomor)
+    pts.forEach((p, i) => {
+      octx.beginPath();
+      octx.arc(p.x, p.y, 16, 0, Math.PI * 2);
+      octx.fillStyle = '#16a34a';
+      octx.fill();
+      octx.lineWidth = 3;
+      octx.strokeStyle = '#ffffff';
+      octx.stroke();
+      octx.fillStyle = '#ffffff';
+      octx.font = 'bold 13px sans-serif';
+      octx.textAlign = 'center';
+      octx.textBaseline = 'middle';
+      octx.fillText(String(i + 1), p.x, p.y + 1);
+    });
+  }
+
+  // Drag sudut dengan pointer (mouse + sentuh)
+  function pointerToNorm(e) {
+    const r = overlayCanvas.getBoundingClientRect();
+    return {
+      x: clamp((e.clientX - r.left) / r.width, 0, 1),
+      y: clamp((e.clientY - r.top) / r.height, 0, 1)
+    };
+  }
+  overlayCanvas.addEventListener('pointerdown', (e) => {
+    const p = pointerToNorm(e);
+    const rect = overlayCanvas.getBoundingClientRect();
+    let best = -1, bestD = Infinity;
+    corners.forEach((c, i) => {
+      const d = Math.hypot((c.x - p.x) * rect.width, (c.y - p.y) * rect.height);
+      if (d < bestD) { bestD = d; best = i; }
+    });
+    if (bestD < 36) { // radius sentuh 36px
+      draggingIndex = best;
+      overlayCanvas.setPointerCapture(e.pointerId);
+      corners[best] = p;
+      drawOverlay();
+    }
+  });
+  overlayCanvas.addEventListener('pointermove', (e) => {
+    if (draggingIndex < 0) return;
+    corners[draggingIndex] = pointerToNorm(e);
+    drawOverlay();
+  });
+  ['pointerup', 'pointercancel'].forEach(ev => overlayCanvas.addEventListener(ev, () => { draggingIndex = -1; }));
+
+  $('btnResetCorners').addEventListener('click', () => {
+    corners = JSON.parse(JSON.stringify(DEFAULT_CORNERS));
+    drawOverlay();
+    toast('Sudut direset ke posisi awal.');
+  });
+
+  // ---------- Deteksi Otomatis sudut (OpenCV: Canny + kontur) ----------
+  $('btnAutoDetect').addEventListener('click', () => {
+    if (!originalCanvas) return;
+    const cvOk = cvReady && typeof cv !== 'undefined';
+    const jsOk = typeof jscanify !== 'undefined';
+    if (!cvOk && !jsOk) {
+      toast('Mesin deteksi belum siap — geser 4 titik hijau secara manual.', 4000);
+      return;
+    }
+    $('processStatus').textContent = 'Mendeteksi tepi kertas…';
+    // Beri browser kesempatan menggambar status
+    setTimeout(() => {
+      try {
+        if (cvOk) {
+          const found = autoDetectWithOpenCV();
+          if (found) {
+            corners = found;
+            drawOverlay();
+            $('processStatus').textContent = 'Sudut terdeteksi (OpenCV). Periksa, lalu tekan Proses.';
+            toast('Sudut kertas terdeteksi otomatis. Sesuaikan bila perlu, lalu proses.');
+            return;
+          }
+        }
+        // Fallback: JScanify bila OpenCV belum siap/gagal
+        const jsCanvas = tryJScanifyWarp();
+        if (jsCanvas) {
+          warpedCanvas = jsCanvas;
+          finishWarp('Kertas diekstrak otomatis (JScanify).');
+          toast('JScanify mengekstrak kertas secara otomatis.');
+          return;
+        }
+        $('processStatus').textContent = 'Deteksi tidak yakin — atur manual.';
+        toast('Deteksi otomatis tidak menemukan 4 sudut yang jelas. Geser manual ya.', 4500);
+      } catch (err) {
+        console.error(err);
+        toast('Deteksi otomatis gagal, silakan atur manual.');
+      }
+    }, 30);
+  });
+
+  function orderPoints(pts) {
+    // pts: [{x,y}...] -> [TL, TR, BR, BL]
+    const sorted = [...pts].sort((a, b) => (a.x + a.y) - (b.x + b.y));
+    const tl = sorted[0], br = sorted[sorted.length - 1];
+    const rest = pts.filter(p => p !== tl && p !== br);
+    const tr = rest[0].x > rest[1].x ? rest[0] : rest[1];
+    const bl = tr === rest[0] ? rest[1] : rest[0];
+    return [tl, tr, br, bl];
+  }
+
+  function autoDetectWithOpenCV() {
+    const src = cv.imread(originalCanvas);
+    const gray = new cv.Mat();
+    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+
+    // Kecilkan untuk kecepatan deteksi (maks lebar 800)
+    const scale = Math.min(1, 800 / gray.cols);
+    let small = gray;
+    if (scale < 1) {
+      small = new cv.Mat();
+      cv.resize(gray, small, new cv.Size(0, 0), scale, scale, cv.INTER_AREA);
+    }
+
+    const blur = new cv.Mat();
+    cv.GaussianBlur(small, blur, new cv.Size(5, 5), 0);
+    const edges = new cv.Mat();
+    cv.Canny(blur, edges, 50, 150);
+    const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+    cv.dilate(edges, edges, kernel);
+
+    const contours = [];
+    const hierarchy = new cv.Mat();
+    cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+    contours.sort((a, b) => cv.contourArea(b) - cv.contourArea(a));
+
+    let result = null;
+    const periFactor = 0.02;
+    for (const cnt of contours) {
+      const peri = cv.arcLength(cnt, true);
+      const approx = new cv.Mat();
+      cv.approxPolyDP(cnt, approx, periFactor * peri, true);
+      if (approx.rows === 4) {
+        const pts = [];
+        for (let i = 0; i < 4; i++) {
+          pts.push({ x: approx.data32S[i * 2] / scale, y: approx.data32S[i * 2 + 1] / scale });
+        }
+        result = orderPoints(pts).map(p => ({ x: p.x / originalCanvas.width, y: p.y / originalCanvas.height }));
+        approx.delete();
+        break;
+      }
+      approx.delete();
+    }
+
+    [src, gray, blur, edges, kernel, hierarchy].forEach(m => { try { m.delete(); } catch (e) {} });
+    if (small !== gray) small.delete();
+    contours.forEach(c => { try { c.delete(); } catch (e) {} });
+    return result;
+  }
+
+  // Fallback ekstraksi via JScanify (library ringan berbasis OpenCV.js).
+  // extractPaper(img, w, h) langsung mengembalikan canvas hasil crop + warp.
+  function tryJScanifyWarp() {
+    try {
+      if (typeof jscanify === 'undefined') return null;
+      const scanner = new jscanify();
+      const maxDim = 1800;
+      const ratio = originalCanvas.width / originalCanvas.height;
+      let outW, outH;
+      if (originalCanvas.width >= originalCanvas.height) { outW = maxDim; outH = Math.round(maxDim / ratio); }
+      else { outH = maxDim; outW = Math.round(maxDim * ratio); }
+      const c = scanner.extractPaper(originalCanvas, outW, outH);
+      return (c && c.width > 0 && c.height > 0) ? c : null;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  }
+
+  // ---------- 2. Proses & Luruskan (warpPerspective) ----------
+  function outputSize() {
+    const px = corners.map(c => ({ x: c.x * originalCanvas.width, y: c.y * originalCanvas.height }));
+    let w = Math.max(dist(px[0], px[1]), dist(px[3], px[2]));
+    let h = Math.max(dist(px[0], px[3]), dist(px[1], px[2]));
+    const MAX = 2200;
+    const s = Math.min(1, MAX / Math.max(w, h));
+    return { w: Math.max(50, Math.round(w * s)), h: Math.max(50, Math.round(h * s)) };
+  }
+
+  // Tampilkan hasil warp, buka panel hasil, aktifkan tombol unduh, perbarui estimasi.
+  function finishWarp(msg) {
+    renderAfter();
+    resultPlaceholder.style.display = 'none';
+    compareControl.classList.remove('hidden');
+    $('btnDownloadJpg').disabled = false;
+    $('btnDownloadPdf').disabled = false;
+    $('processStatus').textContent = msg || 'Selesai. Atur filter di bawah, lalu unduh.';
+    updateEstimate();
+  }
+
+  $('btnProcess').addEventListener('click', () => {
+    if (!originalCanvas) return;
+    $('processStatus').textContent = 'Memproses perspektif…';
+    setTimeout(() => {
+      try {
+        if (cvReady && typeof cv !== 'undefined') {
+          warpedCanvas = warpWithOpenCV();
+        } else {
+          warpedCanvas = warpFallbackJS(); // fallback murni JS bila OpenCV belum siap
+        }
+        finishWarp('Selesai. Atur filter di bawah, lalu unduh.');
+        toast('Dokumen berhasil diluruskan.');
+      } catch (err) {
+        console.error(err);
+        $('processStatus').textContent = 'Gagal memproses. Coba atur sudut lagi.';
+        toast('Gagal memproses gambar. Coba foto lain atau atur sudut ulang.');
+      }
+    }, 30);
+  });
+
+  function warpWithOpenCV() {
+    const { w: outW, h: outH } = outputSize();
+    const src = cv.imread(originalCanvas);
+    const srcPts = corners.flatMap(c => [c.x * originalCanvas.width, c.y * originalCanvas.height]);
+    const dstPts = [0, 0, outW - 1, 0, outW - 1, outH - 1, 0, outH - 1];
+    const srcMat = cv.matFromArray(4, 1, cv.CV_32FC2, srcPts);
+    const dstMat = cv.matFromArray(4, 1, cv.CV_32FC2, dstPts);
+    const M = cv.getPerspectiveTransform(srcMat, dstMat);
+    const dst = new cv.Mat();
+    cv.warpPerspective(src, dst, M, new cv.Size(outW, outH), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(255, 255, 255, 255));
+    const out = document.createElement('canvas');
+    out.width = outW; out.height = outH;
+    cv.imshow(out, dst);
+    [src, srcMat, dstMat, M, dst].forEach(m => { try { m.delete(); } catch (e) {} });
+    return out;
+  }
+
+  /* Fallback warpPerspective murni JS (homography + inverse mapping).
+     Dipakai hanya bila OpenCV.js belum selesai dimuat. */
+  function warpFallbackJS() {
+    const { w: outW, h: outH } = outputSize();
+    const src = corners.map(c => ({ x: c.x * originalCanvas.width, y: c.y * originalCanvas.height }));
+    const dst = [{ x: 0, y: 0 }, { x: outW - 1, y: 0 }, { x: outW - 1, y: outH - 1 }, { x: 0, y: outH - 1 }];
+    const H = homography(src, dst);       // src -> dst
+    const Hinv = invert3x3(H);            // dst -> src
+    const sctx = originalCanvas.getContext('2d');
+    const srcData = sctx.getImageData(0, 0, originalCanvas.width, originalCanvas.height);
+    const out = document.createElement('canvas');
+    out.width = outW; out.height = outH;
+    const octx2 = out.getContext('2d');
+    const outData = octx2.createImageData(outW, outH);
+    const SW = originalCanvas.width, SH = originalCanvas.height;
+    for (let y = 0; y < outH; y++) {
+      for (let x = 0; x < outW; x++) {
+        const den = Hinv[6] * x + Hinv[7] * y + Hinv[8];
+        const sx = (Hinv[0] * x + Hinv[1] * y + Hinv[2]) / den;
+        const sy = (Hinv[3] * x + Hinv[4] * y + Hinv[5]) / den;
+        const di = (y * outW + x) * 4;
+        if (sx < 0 || sy < 0 || sx >= SW - 1 || sy >= SH - 1) {
+          outData.data[di] = outData.data[di + 1] = outData.data[di + 2] = 255; outData.data[di + 3] = 255;
+          continue;
+        }
+        const x0 = Math.floor(sx), y0 = Math.floor(sy), fx = sx - x0, fy = sy - y0;
+        const i00 = (y0 * SW + x0) * 4, i10 = i00 + 4, i01 = i00 + SW * 4, i11 = i01 + 4;
+        for (let ch = 0; ch < 3; ch++) {
+          const v = srcData.data[i00 + ch] * (1 - fx) * (1 - fy) + srcData.data[i10 + ch] * fx * (1 - fy) +
+                    srcData.data[i01 + ch] * (1 - fx) * fy + srcData.data[i11 + ch] * fx * fy;
+          outData.data[di + ch] = v;
+        }
+        outData.data[di + 3] = 255;
+      }
+    }
+    octx2.putImageData(outData, 0, 0);
+    return out;
+  }
+  function homography(src, dst) {
+    // Selesaikan 8 persamaan linear dengan eliminasi Gauss
+    const A = [], b = [];
+    for (let i = 0; i < 4; i++) {
+      const { x, y } = src[i], { x: u, y: v } = dst[i];
+      A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]); b.push(u);
+      A.push([0, 0, 0, x, y, 1, -v * x, -v * y]); b.push(v);
+    }
+    const n = 8;
+    for (let col = 0; col < n; col++) {
+      let piv = col;
+      for (let r = col + 1; r < n; r++) if (Math.abs(A[r][col]) > Math.abs(A[piv][col])) piv = r;
+      [A[col], A[piv]] = [A[piv], A[col]]; [b[col], b[piv]] = [b[piv], b[col]];
+      for (let r = 0; r < n; r++) {
+        if (r === col) continue;
+        const f = A[r][col] / A[col][col];
+        for (let c = col; c < n; c++) A[r][c] -= f * A[col][c];
+        b[r] -= f * b[col];
+      }
+    }
+    const h = b.map((v, i) => v / A[i][i]);
+    return [h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7], 1];
+  }
+  function invert3x3(m) {
+    const [a, b, c, d, e, f, g, h, i] = m;
+    const A = e * i - f * h, B = c * h - b * i, C = b * f - c * e;
+    const det = a * A + d * B + g * C;
+    const inv = 1 / det;
+    return [
+      A * inv, B * inv, C * inv,
+      (f * g - d * i) * inv, (a * i - c * g) * inv, (c * d - a * f) * inv,
+      (d * h - e * g) * inv, (b * g - a * h) * inv, (a * e - b * d) * inv
+    ];
+  }
+
+  // ---------- 3. Filter Penjernih (real-time) ----------
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      filterMode = btn.dataset.mode;
+      scheduleRender();
+    });
+  });
+  function bindSlider(id, valId, setter) {
+    const el = $(id);
+    el.addEventListener('input', () => {
+      setter(parseInt(el.value, 10));
+      $(valId).textContent = el.value;
+      scheduleRender();
+    });
+  }
+  bindSlider('brightness', 'brightnessVal', v => brightness = v);
+  bindSlider('contrast', 'contrastVal', v => contrast = v);
+  bindSlider('saturation', 'saturationVal', v => saturation = v);
+  $('btnResetFilter').addEventListener('click', () => {
+    brightness = contrast = saturation = 0;
+    ['brightness', 'contrast', 'saturation'].forEach(id => $(id).value = 0);
+    ['brightnessVal', 'contrastVal', 'saturationVal'].forEach(id => $(id).textContent = '0');
+    filterMode = 'magic';
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === 'magic'));
+    scheduleRender();
+    toast('Filter direset (Magic Color).');
+  });
+
+  // Preset: foto ruangan kena cahaya — bayangan tangan/HP menutupi dokumen.
+  $('btnShadow').addEventListener('click', () => {
+    filterMode = 'magic';
+    brightness = 15; contrast = 20; saturation = 0;
+    $('brightness').value = 15; $('contrast').value = 20; $('saturation').value = 0;
+    $('brightnessVal').textContent = '15'; $('contrastVal').textContent = '20'; $('saturationVal').textContent = '0';
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === 'magic'));
+    scheduleRender();
+    toast('Mode Bayangan aktif: Magic Color + kecerahan/kontras naik untuk foto berbayang.');
+  });
+
+  function scheduleRender() {
+    if (!warpedCanvas || rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(() => { rafPending = false; renderAfter(); updateEstimate(); });
+  }
+
+  function renderAfter() {
+    if (!warpedCanvas) return;
+    afterCanvas.width = warpedCanvas.width;
+    afterCanvas.height = warpedCanvas.height;
+    applyFilters(warpedCanvas, afterCanvas);
+    // Lapisan bandingkan = hasil warp TANPA filter
+    compareCanvas.width = warpedCanvas.width;
+    compareCanvas.height = warpedCanvas.height;
+    cctx.drawImage(warpedCanvas, 0, 0);
+    applyCompareClip();
+  }
+
+  // --- Cache peta iluminasi (untuk hilangkan bayangan) agar tak dihitung ulang tiap slider ---
+  let illumCache = { key: null, map: null, mw: 0, mh: 0 };
+  function boxBlur(arr, w, h, r) {
+    const tmp = new Float32Array(w * h);
+    const norm = 1 / (2 * r + 1);
+    for (let y = 0; y < h; y++) {                 // horizontal
+      let acc = 0;
+      for (let x = -r; x <= r; x++) acc += arr[y * w + Math.min(w - 1, Math.max(0, x))];
+      for (let x = 0; x < w; x++) {
+        tmp[y * w + x] = acc * norm;
+        acc += arr[y * w + Math.min(w - 1, x + r + 1)] - arr[y * w + Math.max(0, x - r)];
+      }
+    }
+    for (let x = 0; x < w; x++) {                 // vertical
+      let acc = 0;
+      for (let y = -r; y <= r; y++) acc += tmp[Math.min(h - 1, Math.max(0, y)) * w + x];
+      for (let y = 0; y < h; y++) {
+        arr[y * w + x] = acc * norm;
+        acc += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x];
+      }
+    }
+  }
+  function computeIllumination(srcCanvas) {
+    if (illumCache.key === srcCanvas && illumCache.map) return illumCache;
+    const W = srcCanvas.width, H = srcCanvas.height;
+    const scale = 1 / 10;                          // downscale 10x -> sangat cepat
+    const mw = Math.max(2, Math.round(W * scale));
+    const mh = Math.max(2, Math.round(H * scale));
+    const tmp = document.createElement('canvas');
+    tmp.width = mw; tmp.height = mh;
+    tmp.getContext('2d').drawImage(srcCanvas, 0, 0, mw, mh);
+    const d = tmp.getContext('2d').getImageData(0, 0, mw, mh).data;
+    const gray = new Float32Array(mw * mh);
+    for (let i = 0, j = 0; i < d.length; i += 4, j++) {
+      gray[j] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    }
+    const radius = Math.max(2, Math.round(mw * 0.04));  // blur jadi iluminasi frekuensi-rendah
+    boxBlur(gray, mw, mh, radius);
+    boxBlur(gray, mw, mh, radius);
+    illumCache = { key: srcCanvas, map: gray, mw, mh };
+    return illumCache;
+  }
+
+  function applyFilters(srcCanvas, destCanvas) {
+    const W = srcCanvas.width, H = srcCanvas.height;
+    const sctx = srcCanvas.getContext('2d');
+    const dctx = destCanvas.getContext('2d');
+    const srcData = sctx.getImageData(0, 0, W, H);
+    const outData = dctx.createImageData(W, H);
+    const s = srcData.data, o = outData.data;
+    const cf = clamp(1 + contrast / 100, 0.1, 3);      // faktor kontras
+    const satF = 1 + saturation / 100;                 // faktor saturasi
+    const bAdd = brightness;                           // -100..100
+
+    // Siapkan sampler iluminasi bila mode butuh penghilangan bayangan
+    const needIllum = (filterMode === 'magic' || filterMode === 'bw');
+    let sample = null;
+    if (needIllum) {
+      const { map, mw, mh } = computeIllumination(srcCanvas);
+      const sx = (mw - 1) / W, sy = (mh - 1) / H;
+      sample = (px, py) => {
+        const gx = px * sx, gy = py * sy;
+        const x0 = gx | 0, y0 = gy | 0;
+        const x1 = x0 < mw - 1 ? x0 + 1 : x0, y1 = y0 < mh - 1 ? y0 + 1 : y0;
+        const fx = gx - x0, fy = gy - y0;
+        const a = map[y0 * mw + x0], b = map[y0 * mw + x1];
+        const c = map[y1 * mw + x0], d = map[y1 * mw + x1];
+        return (a + (b - a) * fx) * (1 - fy) + (c + (d - c) * fx) * fy;
+      };
+    }
+
+    let p = 0;
+    for (let i = 0; i < s.length; i += 4) {
+      const px = p % W, py = (p / W) | 0; p++;
+      let r = s[i], g = s[i + 1], b = s[i + 2];
+
+      if (sample) {
+        // Hilangkan bayangan/cahaya tak rata: bagi dengan iluminasi lokal.
+        // Rasio sama untuk R,G,B -> hue (warna foto/stempel) tetap alami.
+        const illumV = sample(px, py);
+        const ratio = 255 / (illumV + 1);
+        r *= ratio; g *= ratio; b *= ratio;
+      }
+
+      if (filterMode === 'bw') {
+        let gray = 0.299 * r + 0.587 * g + 0.114 * b;
+        gray = (gray - 128) * cf + 128 + bAdd;
+        r = g = b = clamp(gray, 0, 255);
+      } else if (filterMode === 'magic') {
+        r = clamp((r - 128) * cf + 128 + bAdd, 0, 255);
+        g = clamp((g - 128) * cf + 128 + bAdd, 0, 255);
+        b = clamp((b - 128) * cf + 128 + bAdd, 0, 255);
+      } else { // original (tanpa normalisasi iluminasi)
+        r = clamp((r - 128) * cf + 128 + bAdd, 0, 255);
+        g = clamp((g - 128) * cf + 128 + bAdd, 0, 255);
+        b = clamp((b - 128) * cf + 128 + bAdd, 0, 255);
+      }
+
+      // Saturasi (semua mode)
+      if (saturation !== 0) {
+        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+        r = clamp(gray + (r - gray) * satF, 0, 255);
+        g = clamp(gray + (g - gray) * satF, 0, 255);
+        b = clamp(gray + (b - gray) * satF, 0, 255);
+      }
+
+      o[i] = r; o[i + 1] = g; o[i + 2] = b; o[i + 3] = 255;
+    }
+    dctx.putImageData(outData, 0, 0);
+  }
+
+  // Slider bandingkan sebelum/sesudah
+  compareSlider.addEventListener('input', () => {
+    compareVal.textContent = compareSlider.value + '%';
+    applyCompareClip();
+  });
+  function applyCompareClip() {
+    if (!warpedCanvas) return;
+    // Bagian kiri slider = versi sebelum filter (warp mentah)
+    compareCanvas.style.clipPath = `inset(0 ${100 - parseInt(compareSlider.value, 10)}% 0 0)`;
+  }
+
+  // ---------- 4. Ekspor & Kompresi ----------
+  const qualityEl = $('quality');
+  qualityEl.addEventListener('input', () => {
+    $('qualityVal').textContent = qualityEl.value + '%';
+    updateEstimate();
+  });
+  $('pdfSize').addEventListener('change', updateEstimate);
+
+  function jpegQuality() { return parseInt(qualityEl.value, 10) / 100; }
+
+  function updateEstimate() {
+    if (!afterCanvas.width || afterCanvas.width < 50) return;
+    afterCanvas.toBlob((blob) => {
+      if (!blob) return;
+      const kb = blob.size / 1024;
+      const el = $('fileSizeInfo');
+      el.textContent = 'Estimasi ukuran: ' + formatKB(blob.size) + (kb > 500 ? ' — di atas 500 KB, turunkan kualitas bila portal membatasi.' : ' — aman di bawah 500 KB.');
+      el.className = 'text-sm font-semibold mt-2 ' + (kb > 500 ? 'text-amber-600' : 'text-green-700');
+    }, 'image/jpeg', jpegQuality());
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+
+  $('btnDownloadJpg').addEventListener('click', () => {
+    if (!warpedCanvas) return;
+    afterCanvas.toBlob((blob) => {
+      if (!blob) { toast('Gagal membuat JPG.'); return; }
+      downloadBlob(blob, 'scan-dokumen.jpg');
+      toast('JPG diunduh (' + formatKB(blob.size) + ').');
+    }, 'image/jpeg', jpegQuality());
+  });
+
+  $('btnDownloadPdf').addEventListener('click', () => {
+    if (!warpedCanvas) return;
+    if (!window.jspdf) { toast('jsPDF belum termuat. Periksa koneksi lalu coba lagi.'); return; }
+    try {
+      const { jsPDF } = window.jspdf;
+      const imgData = afterCanvas.toDataURL('image/jpeg', jpegQuality());
+      const imgW = afterCanvas.width, imgH = afterCanvas.height;
+      const size = $('pdfSize').value;
+      let format, orientation = imgW > imgH ? 'landscape' : 'portrait';
+
+      if (size === 'a4') format = 'a4';
+      else if (size === 'f4') format = [210, 330]; // F4 Indonesia
+      else {
+        // Auto: lebar 210mm, tinggi mengikuti rasio gambar
+        format = [210, Math.round(210 * imgH / imgW)];
+      }
+      const doc = new jsPDF({ unit: 'mm', format, orientation, compress: true });
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+      // Gambar di-fit ke halaman TANPA gepeng (pertahankan rasio), diposisikan di tengah
+      let drawW = pageW, drawH = pageW * imgH / imgW;
+      if (drawH > pageH) { drawH = pageH; drawW = pageH * imgW / imgH; }
+      const dx = (pageW - drawW) / 2, dy = (pageH - drawH) / 2;
+      doc.addImage(imgData, 'JPEG', dx, dy, drawW, drawH, undefined, 'FAST');
+      doc.save('scan-dokumen.pdf');
+      toast('PDF diunduh (' + size.toUpperCase() + ').');
+    } catch (err) {
+      console.error(err);
+      toast('Gagal membuat PDF. Coba Download JPG dulu.');
+    }
+  });
+
+  // Fallback JScanify: bila OpenCV gagal total, coba engine JScanify
+  // untuk ekstraksi kertas otomatis (dipakai saat tombol proses bila perlu).
+  // (Fungsi ini sengaja tidak menggantikan warp utama agar rasio bebas.)
+  window.ScanDokumen = { getState: () => ({ cvReady, filterMode, hasResult: !!warpedCanvas }) };
+})();
+</script>
+</body>
+</html>

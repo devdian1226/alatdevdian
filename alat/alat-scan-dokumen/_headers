@@ -1,0 +1,4 @@
+# Cache file OpenCV.js (9,5 MB) selama 1 tahun di edge Cloudflare
+# agar load berikutnya instan. WASM sudah di-embed di dalam opencv.js.
+/vendor/*
+  Cache-Control: public, max-age=31536000, immutable

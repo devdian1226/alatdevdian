@@ -1,64 +1,741 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Buat Surat Lamaran Kerja Online Gratis — Alat Devdian</title>
-<meta name="description" content="Buat surat lamaran kerja profesional dalam hitungan menit. Isi data, pilih format, unduh PDF. Gratis, tanpa daftar akun.">
-<link rel="canonical" href="https://alatdevdian.pages.dev/alat/buat-surat-lamaran-kerja">
-<meta name="robots" content="index, follow, max-image-preview:large">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generator Surat Lamaran Kerja (Format A4)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+        }
 
-<meta property="og:type" content="website">
-<meta property="og:title" content="Buat Surat Lamaran Kerja Online Gratis — Alat Devdian">
-<meta property="og:description" content="Buat surat lamaran kerja profesional dalam hitungan menit. Gratis, tanpa daftar akun.">
-<meta property="og:url" content="https://alatdevdian.pages.dev/alat/buat-surat-lamaran-kerja">
-<meta property="og:locale" content="id_ID">
-<meta name="twitter:card" content="summary">
+        /* Kertas A4 Paten */
+        .a4-paper {
+            width: 210mm;
+            min-height: 297mm;
+            height: 297mm;
+            background: white;
+            padding: 20mm 25mm;
+            box-sizing: border-box;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 12pt;
+            line-height: 1.5;
+            color: #000000;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
 
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "WebApplication",
-  "name": "Buat Surat Lamaran Kerja",
-  "url": "https://alatdevdian.pages.dev/alat/buat-surat-lamaran-kerja",
-  "applicationCategory": "BusinessApplication",
-  "operatingSystem": "Web",
-  "inLanguage": "id",
-  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "IDR" }
-}
-</script>
+        /* Indentation 1cm untuk paragraf */
+        .indent-1cm {
+            text-indent: 1cm;
+        }
 
-<style>
-  :root { color-scheme: dark; }
-  body {
-    margin: 0; padding: 48px 24px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Arial, sans-serif;
-    background: #0b1020; color: #e6ecff; line-height: 1.65;
-  }
-  main { max-width: 680px; margin: 0 auto; }
-  .badge {
-    display: inline-block; font-size: .75rem; letter-spacing: .08em; text-transform: uppercase;
-    color: #8ab4ff; border: 1px solid rgba(138,180,255,.35); padding: 4px 10px; border-radius: 999px; margin-bottom: 18px;
-  }
-  h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); line-height: 1.2; margin: 0 0 14px; letter-spacing: -.02em; }
-  p { color: #9fb0d0; margin: 0 0 16px; }
-  .note {
-    margin-top: 28px; background: rgba(96,165,250,.08); border: 1px solid rgba(96,165,250,.25);
-    border-radius: 14px; padding: 18px 20px; font-size: .9rem;
-  }
-  a { color: #8ab4ff; }
-</style>
+        /* Tabel Biodata agar titik dua sejajar sempurna */
+        .biodata-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-left: 1cm;
+            margin-top: 4px;
+            margin-bottom: 8px;
+        }
+        .biodata-table td {
+            padding: 1.5px 0;
+            vertical-align: top;
+        }
+        .biodata-label {
+            width: 175px;
+        }
+        .biodata-colon {
+            width: 15px;
+            text-align: center;
+        }
+        .biodata-value {
+            width: auto;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
 </head>
-<body>
-<main>
-  <span class="badge">Contoh halaman alat</span>
-  <h1>Buat Surat Lamaran Kerja Online Gratis</h1>
-  <p>Buat surat lamaran kerja profesional dalam hitungan menit: isi data diri, pilih format, lalu unduh sebagai PDF.</p>
-  <p>Halaman ini <strong>tidak</strong> ter-redirect ke devdian.pages.dev. Isi dengan aplikasi alat Anda yang sebenarnya.</p>
+<body class="text-slate-800 antialiased flex flex-col min-h-screen">
 
-  <div class="note">
-    File ini hanya <em>placeholder</em> di dalam paket deploy supaya struktur foldernya jelas.
-    Kalau halaman ini sudah ada di proyek Anda, jangan ditimpa — cukup copy <code>_redirects</code> ke folder output build Anda.
-  </div>
-</main>
+    <!-- Navbar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="bg-blue-600 text-white p-2 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base sm:text-lg text-slate-900 leading-tight">Surat Lamaran Kerja</h1>
+                    <p class="text-xs text-slate-500 hidden sm:block">Standar Kertas A4 • Format Umum & Naratif</p>
+                </div>
+            </div>
+
+            <button id="btn-download-pdf" onclick="downloadPDF()" class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium text-sm px-4 py-2.5 rounded-lg shadow-sm flex items-center gap-2 transition cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span>Simpan PDF (A4)</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Tab Switcher -->
+    <div class="lg:hidden bg-white border-b border-slate-200 px-4 py-2 flex gap-2 sticky top-16 z-20">
+        <button id="tab-edit" onclick="switchMobileTab('edit')" class="flex-1 py-2 text-sm font-semibold rounded-md bg-blue-50 text-blue-700 border border-blue-200 transition">
+            ✏️ Isi Data Surat
+        </button>
+        <button id="tab-preview" onclick="switchMobileTab('preview')" class="flex-1 py-2 text-sm font-semibold rounded-md text-slate-600 hover:bg-slate-50 border border-transparent transition">
+            📄 Pratinjau A4
+        </button>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Left Panel: Form Editor -->
+            <div id="panel-editor" class="lg:col-span-5 space-y-5">
+                
+                <!-- Pilihan Format -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <label class="block text-sm font-bold text-slate-800 mb-3">Pilih Format Surat</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="formatSurat" value="umum" class="peer sr-only" checked onchange="toggleFormat()">
+                            <div class="p-3 rounded-lg border-2 border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50/50 transition text-center">
+                                <div class="font-semibold text-sm text-slate-900">Format Umum</div>
+                                <div class="text-xs text-slate-500 mt-0.5">Dengan daftar biodata</div>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="formatSurat" value="naratif" class="peer sr-only" onchange="toggleFormat()">
+                            <div class="p-3 rounded-lg border-2 border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50/50 transition text-center">
+                                <div class="font-semibold text-sm text-slate-900">Format Naratif</div>
+                                <div class="text-xs text-slate-500 mt-0.5">Paragraf kualifikasi</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 1. Kepala Surat & Tujuan -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <h2 class="font-bold text-sm text-slate-800 border-b border-slate-100 pb-2">1. Tanggal & Tujuan Surat</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Kota & Tanggal</label>
+                            <input type="text" id="inp-tanggal" value="Bandung, 15 Juni 2025" oninput="updatePreview()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Perihal</label>
+                            <input type="text" id="inp-perihal" value="Lamaran Pekerjaan" oninput="updatePreview()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Kepada Yth. (Jabatan / HRD)</label>
+                        <input type="text" id="inp-kepada" value="HRD Manager PT Kreasi Digital Nusantara" oninput="updatePreview()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Alamat Perusahaan</label>
+                        <textarea id="inp-alamat-pt" rows="2" oninput="updatePreview()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">Jl. Asia Afrika No. 123, Kota Bandung
+Jawa Barat</textarea>
+                    </div>
+                </div>
+
+                <!-- 2. Paragraf Pembuka -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                    <h2 class="font-bold text-sm text-slate-800 border-b border-slate-100 pb-2">2. Paragraf Pembuka</h2>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Isi Pembuka (Sumber lowongan & posisi dilamar)</label>
+                        <textarea id="inp-pembuka" rows="3" oninput="updatePreview()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">Berdasarkan informasi lowongan di LinkedIn tanggal 12 Juni 2025, saya bermaksud melamar posisi Staff Marketing Digital di PT Kreasi Digital Nusantara.</textarea>
+                    </div>
+                </div>
+
+                <!-- 3A. Badan Surat (Format Umum) -->
+                <div id="form-bagian-umum" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                    <h2 class="font-bold text-sm text-slate-800 border-b border-slate-100 pb-2">3. Data Diri & Kualifikasi (Format Umum)</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Nama Lengkap</label>
+                            <input type="text" id="inp-umum-nama" value="Rina Amelia Putri" oninput="syncNama(this.value)" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Tempat, Tanggal Lahir</label>
+                            <input type="text" id="inp-umum-ttl" value="Bandung, 14 Agustus 2001" oninput="updatePreview()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Pendidikan Terakhir</label>
+                            <input type="text" id="inp-umum-pendidikan" value="S-1 Ilmu Komunikasi Universitas Padjadjaran" oninput="updatePreview()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">No. HP / WhatsApp</label>
+                            <input type="text" id="inp-umum-hp" value="0812-3456-7890" oninput="syncHp(this.value)" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Email</label>
+                            <input type="text" id="inp-umum-email" value="rina.amelia@email.com" oninput="syncEmail(this.value)" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Alamat Domisili</label>
+                            <input type="text" id="inp-umum-alamat" value="Jl. Dipatiukur No. 45, Coblong, Kota Bandung" oninput="updatePreview()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Kalimat Singkat Kualifikasi / Pengalaman</label>
+                        <textarea id="inp-umum-kualifikasi" rows="2" oninput="updatePreview()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">Saya memiliki pengalaman 1 tahun sebagai Social Media Specialist serta menguasai Google Analytics dan Meta Ads Manager.</textarea>
+                    </div>
+                </div>
+
+                <!-- 3B. Badan Surat (Format Naratif) -->
+                <div id="form-bagian-naratif" class="hidden bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                    <h2 class="font-bold text-sm text-slate-800 border-b border-slate-100 pb-2">3. Paragraf Kualifikasi (Format Naratif)</h2>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Paragraf Kualifikasi & Pencapaian</label>
+                        <textarea id="inp-naratif-kualifikasi" rows="5" oninput="updatePreview()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">Saya lulusan S-1 Ilmu Komunikasi Universitas Padjadjaran (IPK 3,72) dengan pengalaman 1 tahun sebagai Social Media Specialist. Saya berhasil meningkatkan engagement rate klien dari 1,2% menjadi 4,8% dalam 6 bulan. Saya menguasai Google Analytics, Meta Ads Manager, dan bersertifikasi HubSpot Content Marketing.</textarea>
+                    </div>
+                    <div class="pt-1">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="chk-kontak-bawah" checked onchange="updatePreview()" class="rounded text-blue-600 focus:ring-blue-500">
+                            <span class="text-xs font-medium text-slate-700">Tampilkan No. HP & Email di bawah nama tanda tangan</span>
+                        </label>
+                    </div>
+                    <div id="box-kontak-naratif" class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">No. HP / WhatsApp</label>
+                            <input type="text" id="inp-naratif-hp" value="0812-3456-7890" oninput="syncHp(this.value)" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Email</label>
+                            <input type="text" id="inp-naratif-email" value="rina.amelia@email.com" oninput="syncEmail(this.value)" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Lampiran & Penutup -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                    <h2 class="font-bold text-sm text-slate-800 border-b border-slate-100 pb-2">4. Lampiran & Penutup</h2>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Daftar Lampiran (Satu item per baris)</label>
+                        <textarea id="inp-lampiran" rows="5" oninput="updatePreview()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">Daftar Riwayat Hidup (Curriculum Vitae)
+Fotokopi KTP
+Fotokopi Ijazah dan Transkrip Nilai
+Fotokopi Surat Keterangan Catatan Kepolisian (SKCK)
+Pas Foto Terbaru Ukuran 4x6 (2 Lembar)</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Paragraf Penutup</label>
+                        <textarea id="inp-penutup" rows="2" oninput="updatePreview()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">Besar harapan saya untuk dapat diberikan kesempatan wawancara. Atas perhatian Bapak/Ibu, saya ucapkan terima kasih.</textarea>
+                    </div>
+                </div>
+
+                <!-- 5. Tanda Tangan & Nama -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <h2 class="font-bold text-sm text-slate-800 border-b border-slate-100 pb-2">5. Tanda Tangan & Nama Terang</h2>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Nama Pengirim (Tanda Tangan)</label>
+                        <input type="text" id="inp-nama-ttd" value="Rina Amelia Putri" oninput="syncNama(this.value)" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Upload File Tanda Tangan (PNG / JPG Transparan)</label>
+                        <div class="flex items-center gap-3">
+                            <label class="flex-1 cursor-pointer bg-slate-50 hover:bg-slate-100 border border-dashed border-slate-300 rounded-lg px-3 py-2.5 text-center transition">
+                                <span class="text-xs font-medium text-blue-600">Pilih Gambar Tanda Tangan...</span>
+                                <input type="file" id="inp-ttd-file" accept="image/*" class="hidden" onchange="handleSignatureUpload(event)">
+                            </label>
+                            <button type="button" id="btn-hapus-ttd" onclick="clearSignature()" class="hidden px-3 py-2.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition">
+                                Hapus
+                            </button>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">Gunakan gambar tanda tangan berlatar putih bersih atau transparan (PNG) agar menyatu dengan kertas.</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Panel: Live A4 Preview -->
+            <div id="panel-preview" class="hidden lg:block lg:col-span-7">
+                <div class="bg-slate-200/80 p-3 sm:p-6 rounded-xl border border-slate-300 flex flex-col items-center">
+                    <div class="w-full flex items-center justify-between mb-3 px-1">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Pratinjau Kertas A4 (210 × 297 mm)</span>
+                        <span class="text-xs text-slate-500">1 Halaman Paten</span>
+                    </div>
+
+                    <!-- Responsive Scaler Container -->
+                    <div id="preview-wrapper" class="w-full overflow-hidden flex justify-center">
+                        <div id="preview-scaler" class="origin-top transition-transform duration-150">
+                            
+                            <!-- KERTAS A4 -->
+                            <div id="a4-document" class="a4-paper">
+                                
+                                <!-- Tanggal: Kanan Atas -->
+                                <div class="text-right mb-6">
+                                    <div id="out-tanggal">Bandung, 15 Juni 2025</div>
+                                </div>
+
+                                <!-- Perihal & Lampiran Singkat: Kiri -->
+                                <div class="mb-5">
+                                    <table>
+                                        <tr>
+                                            <td style="width: 75px;">Perihal</td>
+                                            <td style="width: 15px;">:</td>
+                                            <td id="out-perihal">Lamaran Pekerjaan</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Lampiran</td>
+                                            <td>:</td>
+                                            <td id="out-jml-lampiran">5 berkas</td>
+                                        </tr>
+                                    </table>
+                                </div>
+
+                                <!-- Alamat Tujuan: Kiri -->
+                                <div class="mb-6">
+                                    <div>Kepada Yth.</div>
+                                    <div id="out-kepada" class="font-normal">HRD Manager PT Kreasi Digital Nusantara</div>
+                                    <div id="out-alamat-pt" class="whitespace-pre-line">Jl. Asia Afrika No. 123, Kota Bandung
+Jawa Barat</div>
+                                </div>
+
+                                <!-- Salam Pembuka: Kiri -->
+                                <div class="mb-3">Dengan hormat,</div>
+
+                                <!-- Paragraf Pembuka: Kiri, menjorok 1cm -->
+                                <p id="out-pembuka" class="indent-1cm text-justify mb-3">
+                                    Berdasarkan informasi lowongan di LinkedIn tanggal 12 Juni 2025, saya bermaksud melamar posisi Staff Marketing Digital di PT Kreasi Digital Nusantara.
+                                </p>
+
+                                <!-- BADAN SURAT: FORMAT UMUM -->
+                                <div id="out-body-umum" class="mb-3">
+                                    <div class="indent-1cm mb-1">Adapun data diri saya adalah sebagai berikut:</div>
+                                    <table class="biodata-table">
+                                        <tr>
+                                            <td class="biodata-label">Nama</td>
+                                            <td class="biodata-colon">:</td>
+                                            <td class="biodata-value" id="out-umum-nama">Rina Amelia Putri</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="biodata-label">Tempat, Tanggal Lahir</td>
+                                            <td class="biodata-colon">:</td>
+                                            <td class="biodata-value" id="out-umum-ttl">Bandung, 14 Agustus 2001</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="biodata-label">Pendidikan Terakhir</td>
+                                            <td class="biodata-colon">:</td>
+                                            <td class="biodata-value" id="out-umum-pendidikan">S-1 Ilmu Komunikasi Universitas Padjadjaran</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="biodata-label">No. HP / WhatsApp</td>
+                                            <td class="biodata-colon">:</td>
+                                            <td class="biodata-value" id="out-umum-hp">0812-3456-7890</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="biodata-label">Email</td>
+                                            <td class="biodata-colon">:</td>
+                                            <td class="biodata-value" id="out-umum-email">rina.amelia@email.com</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="biodata-label">Alamat</td>
+                                            <td class="biodata-colon">:</td>
+                                            <td class="biodata-value" id="out-umum-alamat">Jl. Dipatiukur No. 45, Coblong, Kota Bandung</td>
+                                        </tr>
+                                    </table>
+                                    <p id="out-umum-kualifikasi" class="indent-1cm text-justify mt-2">
+                                        Saya memiliki pengalaman 1 tahun sebagai Social Media Specialist serta menguasai Google Analytics dan Meta Ads Manager.
+                                    </p>
+                                </div>
+
+                                <!-- BADAN SURAT: FORMAT NARATIF -->
+                                <div id="out-body-naratif" class="hidden mb-3">
+                                    <p id="out-naratif-kualifikasi" class="indent-1cm text-justify">
+                                        Saya lulusan S-1 Ilmu Komunikasi Universitas Padjadjaran (IPK 3,72) dengan pengalaman 1 tahun sebagai Social Media Specialist. Saya berhasil meningkatkan engagement rate klien dari 1,2% menjadi 4,8% dalam 6 bulan. Saya menguasai Google Analytics, Meta Ads Manager, dan bersertifikasi HubSpot Content Marketing.
+                                    </p>
+                                </div>
+
+                                <!-- Lampiran: Kiri -->
+                                <div class="mb-3">
+                                    <div class="indent-1cm mb-1">Sebagai bahan pertimbangan, bersama ini saya lampirkan:</div>
+                                    <ol id="out-lampiran" class="list-decimal pl-12 space-y-0.5">
+                                        <li>Daftar Riwayat Hidup (Curriculum Vitae)</li>
+                                        <li>Fotokopi KTP</li>
+                                        <li>Fotokopi Ijazah dan Transkrip Nilai</li>
+                                        <li>Fotokopi Surat Keterangan Catatan Kepolisian (SKCK)</li>
+                                        <li>Pas Foto Terbaru Ukuran 4x6 (2 Lembar)</li>
+                                    </ol>
+                                </div>
+
+                                <!-- Penutup: Kiri -->
+                                <p id="out-penutup" class="indent-1cm text-justify mb-8">
+                                    Besar harapan saya untuk dapat diberikan kesempatan wawancara. Atas perhatian Bapak/Ibu, saya ucapkan terima kasih.
+                                </p>
+
+                                <!-- Salam Penutup, Tanda Tangan, Nama: Kanan Bawah sejajar pojok kanan tanggal -->
+                                <div class="flex justify-end mt-6">
+                                    <div class="text-right">
+                                        <div>Hormat saya,</div>
+                                        
+                                        <!-- Area Tanda Tangan -->
+                                        <div class="h-20 flex items-center justify-end my-1">
+                                            <img id="out-ttd-img" src="" alt="Tanda Tangan" class="hidden max-h-20 max-w-[180px] object-contain mix-blend-multiply">
+                                            <div id="out-ttd-placeholder" class="text-xs text-slate-300 italic select-none">(tanda tangan)</div>
+                                        </div>
+
+                                        <div id="out-nama-ttd" class="font-normal">Rina Amelia Putri</div>
+                                        
+                                        <!-- Kontak opsional khusus Naratif -->
+                                        <div id="out-kontak-naratif" class="hidden text-[11pt] leading-snug mt-0.5">
+                                            <div id="out-naratif-hp">0812-3456-7890</div>
+                                            <div id="out-naratif-email">rina.amelia@email.com</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                            <!-- END KERTAS A4 -->
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Bagian Tutorial & Deskripsi Penggunaan Alat -->
+        <section class="mt-12 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+            <div class="border-b border-slate-100 pb-4">
+                <span class="inline-block px-3 py-1 text-xs font-semibold text-blue-700 bg-blue-50 rounded-full mb-2">Panduan Pengguna</span>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Deskripsi & Cara Menggunakan Generator Surat Lamaran Kerja A4</h2>
+                <p class="text-sm text-slate-600 mt-1.5 leading-relaxed">
+                    Alat pembuat surat lamaran kerja otomatis ini dirancang untuk membantu pencari kerja menyusun surat lamaran profesional sesuai standar tata persuratan Indonesia (kertas A4 210 × 297 mm) secara instan, rapi, dan siap dikirim dalam bentuk PDF.
+                </p>
+            </div>
+
+            <!-- Penjelasan Perbedaan Format -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <h3 class="font-bold text-sm text-slate-900 flex items-center gap-2 mb-1.5">
+                        <span class="w-2 h-2 rounded-full bg-blue-600"></span>
+                        1. Format Umum (Dengan Biodata)
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                        Cocok untuk melamar ke instansi pemerintahan, BUMN, pabrik, maupun perusahaan konvensional. Menyajikan daftar identitas diri secara terstruktur dengan tanda titik dua (:) yang otomatis sejajar lurus ke bawah.
+                    </p>
+                </div>
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <h3 class="font-bold text-sm text-slate-900 flex items-center gap-2 mb-1.5">
+                        <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+                        2. Format Naratif (Paragraf Kualifikasi)
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                        Lebih ringkas dan modern, sangat direkomendasikan untuk perusahaan startup, agensi kreatif, maupun korporasi swasta. Mengganti daftar biodata dengan paragraf singkat yang menonjolkan keahlian dan pencapaian Anda.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Langkah-Langkah Penggunaan -->
+            <div>
+                <h3 class="font-bold text-base text-slate-900 mb-3">Langkah-Langkah Membuat Surat Lamaran:</h3>
+                <ol class="space-y-3 text-sm text-slate-700">
+                    <li class="flex items-start gap-3">
+                        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">1</span>
+                        <div>
+                            <strong class="text-slate-900">Pilih Format Surat:</strong> Tentukan jenis surat yang sesuai dengan kebutuhan lowongan kerja Anda, apakah menggunakan <strong>Format Umum</strong> atau <strong>Format Naratif</strong>.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">2</span>
+                        <div>
+                            <strong class="text-slate-900">Isi Tanggal & Tujuan Perusahaan:</strong> Masukkan kota beserta tanggal pembuatan surat, posisi atau jabatan HRD yang dituju, serta alamat lengkap perusahaan.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">3</span>
+                        <div>
+                            <strong class="text-slate-900">Lengkapi Pembuka, Data Diri & Kualifikasi:</strong> Sesuaikan informasi sumber lowongan, posisi yang dilamar, serta data diri atau ringkasan pengalaman kerja Anda pada kolom yang tersedia.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">4</span>
+                        <div>
+                            <strong class="text-slate-900">Atur Daftar Lampiran:</strong> Tuliskan berkas lampiran satu item per baris (misalnya CV, KTP, Ijazah, SKCK, dan Pas Foto). Jumlah berkas pada bagian atas surat akan terhitung otomatis sesuai jumlah baris.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">5</span>
+                        <div>
+                            <strong class="text-slate-900">Unggah Tanda Tangan Digital (Opsional):</strong> Klik tombol unggah tanda tangan untuk memasukkan gambar tanda tangan berlatar putih bersih atau PNG transparan (disarankan rasio 2:1 seperti 600×300 px dan sudah di-<em>crop</em> mepet).
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">6</span>
+                        <div>
+                            <strong class="text-slate-900">Periksa Pratinjau & Simpan PDF:</strong> Cek kembali hasil akhir pada panel <strong>Pratinjau A4</strong> (atau tab Pratinjau jika menggunakan smartphone), lalu klik tombol <strong>Simpan PDF (A4)</strong> di pojok kanan atas untuk mengunduh file siap kirim.
+                        </div>
+                    </li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- Kotak Kembali ke Artikel -->
+        <div class="mt-6 mb-4 bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-6 sm:p-7 text-center shadow-md border border-slate-700">
+            <p class="text-slate-300 text-xs sm:text-sm mb-3">Ingin membaca panduan karier, tips melamar kerja, atau mencoba alat bermanfaat lainnya?</p>
+            <a href="https://DevDian.pages.dev" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 bg-white hover:bg-blue-50 text-slate-900 font-bold text-sm sm:text-base px-6 py-3 rounded-xl shadow-sm transition transform hover:-translate-y-0.5">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                <span>Kembali ke Artikel</span>
+            </a>
+            <div class="mt-2.5 text-[11px] text-slate-400">DevDian.pages.dev</div>
+        </div>
+
+    </main>
+
+    <script>
+        // Sinkronisasi input nama, hp, email antar format
+        function syncNama(val) {
+            document.getElementById('inp-umum-nama').value = val;
+            document.getElementById('inp-nama-ttd').value = val;
+            updatePreview();
+        }
+
+        function syncHp(val) {
+            document.getElementById('inp-umum-hp').value = val;
+            document.getElementById('inp-naratif-hp').value = val;
+            updatePreview();
+        }
+
+        function syncEmail(val) {
+            document.getElementById('inp-umum-email').value = val;
+            document.getElementById('inp-naratif-email').value = val;
+            updatePreview();
+        }
+
+        // Toggle antara Format Umum dan Format Naratif
+        function toggleFormat() {
+            const format = document.querySelector('input[name="formatSurat"]:checked').value;
+            const formUmum = document.getElementById('form-bagian-umum');
+            const formNaratif = document.getElementById('form-bagian-naratif');
+            const outUmum = document.getElementById('out-body-umum');
+            const outNaratif = document.getElementById('out-body-naratif');
+
+            if (format === 'umum') {
+                formUmum.classList.remove('hidden');
+                formNaratif.classList.add('hidden');
+                outUmum.classList.remove('hidden');
+                outNaratif.classList.add('hidden');
+            } else {
+                formUmum.classList.add('hidden');
+                formNaratif.classList.remove('hidden');
+                outUmum.classList.add('hidden');
+                outNaratif.classList.remove('hidden');
+            }
+            updatePreview();
+        }
+
+        // Update Pratinjau Real-time
+        function updatePreview() {
+            const format = document.querySelector('input[name="formatSurat"]:checked').value;
+
+            document.getElementById('out-tanggal').textContent = document.getElementById('inp-tanggal').value;
+            document.getElementById('out-perihal').textContent = document.getElementById('inp-perihal').value;
+            document.getElementById('out-kepada').textContent = document.getElementById('inp-kepada').value;
+            document.getElementById('out-alamat-pt').textContent = document.getElementById('inp-alamat-pt').value;
+            document.getElementById('out-pembuka').textContent = document.getElementById('inp-pembuka').value;
+            document.getElementById('out-penutup').textContent = document.getElementById('inp-penutup').value;
+            document.getElementById('out-nama-ttd').textContent = document.getElementById('inp-nama-ttd').value;
+
+            // Format Umum
+            document.getElementById('out-umum-nama').textContent = document.getElementById('inp-umum-nama').value;
+            document.getElementById('out-umum-ttl').textContent = document.getElementById('inp-umum-ttl').value;
+            document.getElementById('out-umum-pendidikan').textContent = document.getElementById('inp-umum-pendidikan').value;
+            document.getElementById('out-umum-hp').textContent = document.getElementById('inp-umum-hp').value;
+            document.getElementById('out-umum-email').textContent = document.getElementById('inp-umum-email').value;
+            document.getElementById('out-umum-alamat').textContent = document.getElementById('inp-umum-alamat').value;
+            document.getElementById('out-umum-kualifikasi').textContent = document.getElementById('inp-umum-kualifikasi').value;
+
+            // Format Naratif
+            document.getElementById('out-naratif-kualifikasi').textContent = document.getElementById('inp-naratif-kualifikasi').value;
+            document.getElementById('out-naratif-hp').textContent = document.getElementById('inp-naratif-hp').value;
+            document.getElementById('out-naratif-email').textContent = document.getElementById('inp-naratif-email').value;
+
+            const showKontakBawah = document.getElementById('chk-kontak-bawah').checked;
+            document.getElementById('box-kontak-naratif').style.display = showKontakBawah ? 'grid' : 'none';
+            
+            const outKontakNaratif = document.getElementById('out-kontak-naratif');
+            if (format === 'naratif' && showKontakBawah) {
+                outKontakNaratif.classList.remove('hidden');
+            } else {
+                outKontakNaratif.classList.add('hidden');
+            }
+
+            // Lampiran List
+            const lampiranRaw = document.getElementById('inp-lampiran').value.split('\n').filter(line => line.trim() !== '');
+            const outLampiran = document.getElementById('out-lampiran');
+            outLampiran.innerHTML = '';
+            lampiranRaw.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item.replace(/^\d+\.\s*/, '');
+                outLampiran.appendChild(li);
+            });
+            document.getElementById('out-jml-lampiran').textContent = lampiranRaw.length > 0 ? `${lampiranRaw.length} berkas` : '-';
+        }
+
+        // Upload Tanda Tangan
+        function handleSignatureUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.getElementById('out-ttd-img');
+                const placeholder = document.getElementById('out-ttd-placeholder');
+                const btnHapus = document.getElementById('btn-hapus-ttd');
+
+                img.src = e.target.result;
+                img.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                btnHapus.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearSignature() {
+            const img = document.getElementById('out-ttd-img');
+            const placeholder = document.getElementById('out-ttd-placeholder');
+            const btnHapus = document.getElementById('btn-hapus-ttd');
+            const fileInput = document.getElementById('inp-ttd-file');
+
+            img.src = '';
+            img.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+            btnHapus.classList.add('hidden');
+            fileInput.value = '';
+        }
+
+        // Responsive Scaling untuk Kertas A4 di Layar HP / Tablet
+        function scaleA4Preview() {
+            const wrapper = document.getElementById('preview-wrapper');
+            const scaler = document.getElementById('preview-scaler');
+            const doc = document.getElementById('a4-document');
+            
+            if (!wrapper || wrapper.offsetParent === null) return;
+
+            const availableWidth = wrapper.clientWidth;
+            const a4WidthPx = doc.offsetWidth; // ~794px pada 96dpi
+            const a4HeightPx = doc.offsetHeight; // ~1123px pada 96dpi
+
+            if (availableWidth < a4WidthPx) {
+                const scale = availableWidth / a4WidthPx;
+                scaler.style.transform = `scale(${scale})`;
+                wrapper.style.height = `${a4HeightPx * scale}px`;
+            } else {
+                scaler.style.transform = 'scale(1)';
+                wrapper.style.height = `${a4HeightPx}px`;
+            }
+        }
+
+        // Navigasi Tab Khusus Mobile
+        function switchMobileTab(tab) {
+            const panelEditor = document.getElementById('panel-editor');
+            const panelPreview = document.getElementById('panel-preview');
+            const tabEdit = document.getElementById('tab-edit');
+            const tabPreview = document.getElementById('tab-preview');
+
+            if (tab === 'edit') {
+                panelEditor.classList.remove('hidden');
+                panelPreview.classList.add('hidden');
+                
+                tabEdit.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-200');
+                tabEdit.classList.remove('text-slate-600', 'border-transparent');
+                
+                tabPreview.classList.remove('bg-blue-50', 'text-blue-700', 'border-blue-200');
+                tabPreview.classList.add('text-slate-600', 'border-transparent');
+            } else {
+                panelEditor.classList.add('hidden');
+                panelPreview.classList.remove('hidden');
+                
+                tabPreview.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-200');
+                tabPreview.classList.remove('text-slate-600', 'border-transparent');
+                
+                tabEdit.classList.remove('bg-blue-50', 'text-blue-700', 'border-blue-200');
+                tabEdit.classList.add('text-slate-600', 'border-transparent');
+
+                setTimeout(scaleA4Preview, 10);
+            }
+        }
+
+        // Export ke PDF A4 Paten
+        function downloadPDF() {
+            const btn = document.getElementById('btn-download-pdf');
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<span class="animate-pulse">Menyiapkan PDF...</span>`;
+
+            // Pastikan placeholder (tanda tangan) tidak ikut tercetak jika belum upload gambar
+            const placeholder = document.getElementById('out-ttd-placeholder');
+            const wasPlaceholderVisible = !placeholder.classList.contains('hidden');
+            if (wasPlaceholderVisible) placeholder.style.opacity = '0';
+
+            // Clone dokumen agar skala layar HP tidak merusak ukuran asli A4 PDF
+            const originalDoc = document.getElementById('a4-document');
+            const clone = originalDoc.cloneNode(true);
+            clone.style.boxShadow = 'none';
+            clone.style.margin = '0';
+            // Kunci tinggi tepat 296.5mm agar tidak meluber 1px menjadi halaman ke-2 di html2pdf
+            clone.style.height = '296.5mm';
+            clone.style.minHeight = '296.5mm';
+            clone.style.overflow = 'hidden';
+
+            const namaPelamar = document.getElementById('inp-nama-ttd').value.trim() || 'Pelamar';
+            const formatLabel = document.querySelector('input[name="formatSurat"]:checked').value === 'umum' ? 'Umum' : 'Naratif';
+            const filename = `Surat_Lamaran_${formatLabel}_${namaPelamar.replace(/\s+/g, '_')}.pdf`;
+
+            const opt = {
+                margin: 0,
+                filename: filename,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, letterRendering: true, scrollY: 0 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(clone).save().then(() => {
+                if (wasPlaceholderVisible) placeholder.style.opacity = '1';
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }).catch(err => {
+                console.error(err);
+                if (wasPlaceholderVisible) placeholder.style.opacity = '1';
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+                alert('Terjadi kesalahan saat membuat PDF. Silakan coba lagi.');
+            });
+        }
+
+        window.addEventListener('resize', scaleA4Preview);
+        window.addEventListener('DOMContentLoaded', () => {
+            updatePreview();
+            scaleA4Preview();
+        });
+    </script>
 </body>
 </html>
