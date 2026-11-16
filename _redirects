@@ -1,0 +1,26 @@
+# ============================================================
+#  alatdevdian.pages.dev  ->  devdian.pages.dev
+#  HANYA halaman root yang dialihkan. Halaman alat tetap hidup.
+#  Format: [source] [destination] [status]
+#  Urutan penting: aturan statis (tanpa * / :placeholder) di atas.
+#  Status 301 = permanen (paling baik untuk SEO: link equity ikut pindah).
+# ============================================================
+
+# Root  ->  situs utama (301 permanen)
+/                          https://devdian.pages.dev/        301
+
+# Variasi umum halaman depan supaya tidak jadi duplikat konten
+/index.html                https://devdian.pages.dev/        301
+/index.htm                 https://devdian.pages.dev/        301
+
+# ------------------------------------------------------------------
+# SENGAJA TIDAK ADA aturan untuk path di bawah ini, jadi tetap 200 OK
+# dan tidak ikut ter-redirect:
+#   /alat/*
+#   /alat/buat-surat-lamaran-kerja
+#   /robots.txt, /sitemap.xml, dll.
+#
+# JANGAN tambahkan pola seperti:
+#   /*   https://devdian.pages.dev/:splat   301     <-- ini akan
+#   membunuh semua halaman alat. Hindari.
+# ------------------------------------------------------------------

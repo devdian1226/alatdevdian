@@ -1,0 +1,10 @@
+# Header keamanan dasar untuk semua halaman (tidak berlaku untuk response redirect).
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+
+# Halaman alat: HTML jangan di-cache lama supaya update cepat terlihat.
+/alat/*
+  Cache-Control: public, max-age=0, must-revalidate

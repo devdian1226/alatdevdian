@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /index.html
+
+# Halaman alat tetap boleh diindeks. Root dialihkan 301 ke devdian.pages.dev.
+Sitemap: https://alatdevdian.pages.dev/sitemap.xml
